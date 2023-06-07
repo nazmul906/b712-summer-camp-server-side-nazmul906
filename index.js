@@ -47,7 +47,7 @@ async function run() {
     });
 
     // only admin can see all user
-    //todo: sucured for admin
+    //todo: secured this request for admin
     app.get("/users", async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
@@ -66,6 +66,23 @@ async function run() {
 
       const result = await userCollection.updateOne(filter, updateDoc);
 
+      res.send(result);
+    });
+
+    // now make moderator via admin
+    //todo: secured this request for admin
+
+    //localhost:5000/users/instructor/6480dff281e4c2ff69c92651
+    app.patch("/users/instructor/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+
+      const updateDoc = {
+        $set: {
+          role: "instructor",
+        },
+      };
+      const result = await userCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
 
