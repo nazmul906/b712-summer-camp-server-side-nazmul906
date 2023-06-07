@@ -11,8 +11,8 @@ app.get("/", (req, res) => {
   res.send("Welcome to foreign laguage school");
 });
 
-const { MongoClient, ServerApiVersion } = require("mongodb");
-console.log(process.env.dbUser);
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+// console.log(process.env.dbUser);
 const uri = `mongodb+srv://${process.env.dbUser}:${process.env.dbPass}@cluster0.w5hdwnt.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -35,6 +35,7 @@ async function run() {
 
     // for all user
     // this api hits from sign up and social login page
+    // todo:Socail login check
     app.post("/users", async (req, res) => {
       const user = req.body;
       //   console.log(user);
@@ -45,10 +46,26 @@ async function run() {
       res.send(result);
     });
 
-    // see all user
-    // sucured for admin
+    // only admin can see all user
+    //todo: sucured for admin
     app.get("/users", async (req, res) => {
       const result = await userCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.patch("/users/admin/:id", async (req, res) => {
+      const id = req.params.id;
+
+      //   console.log(id);
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          role: "admin",
+        },
+      };
+
+      const result = await userCollection.updateOne(filter, updateDoc);
+
       res.send(result);
     });
 
