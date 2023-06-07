@@ -86,6 +86,18 @@ async function run() {
       res.send(result);
     });
 
+    // check whether the user admin/not
+    // remember:cliet will recieve logged in user from authContext to perform transtack wury
+
+    app.get("/users/admin/:email", async (req, res) => {
+      const userEmail = req.params.email;
+      const query = { email: userEmail };
+      const user = await userCollection.findOne(query);
+      console.log("user", user);
+      const result = { admin: user?.role === "admin" };
+      res.send(result);
+    });
+
     // todo: this class should be the approved class by admin
     app.get("/allclass", async (req, res) => {
       const result = await classCollection.find().toArray();
