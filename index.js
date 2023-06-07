@@ -29,6 +29,36 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
     // Send a ping to confirm a successful connection
+
+    const userCollection = client.db("SummerCamp").collection("users");
+    const classCollection = client.db("SummerCamp").collection("allclass");
+
+    // for all user
+    // this api hits from sign up and social login page
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      //   console.log(user);
+      const query = { email: user.email };
+
+      const result = await userCollection.insertOne(query);
+      //   console.log(result);
+      res.send(result);
+    });
+
+    // see all user
+    // sucured for admin
+    app.get("/users", async (req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    });
+
+    // todo: this class should be the approved class by admin
+    app.get("/allclass", async (req, res) => {
+      const result = await classCollection.find().toArray();
+      //   console.log(result);
+      res.send(result);
+    });
+
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
