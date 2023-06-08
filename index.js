@@ -62,7 +62,7 @@ async function run() {
       const user = req.body;
 
       const jwtToken = jwt.sign(user, process.env.SecretAccessToken, {
-        expiresIn: "1hr",
+        expiresIn: "8hr",
       });
       res.send({ jwtToken });
     });
@@ -74,11 +74,6 @@ async function run() {
       const user = req.body;
       //   console.log(user);
 
-      if (user.email !== req.decoded.email) {
-        return res
-          .status(401)
-          .send({ error: true, message: "unathorized token" });
-      }
       const query = { email: user.email };
       const result = await userCollection.insertOne(query);
       //   console.log(result);
@@ -156,6 +151,16 @@ async function run() {
       console.log(user);
       const result = { instructor: user?.role === "instructor" };
       // response is {instructor:true}
+      res.send(result);
+    });
+
+    // post add class data by instructor
+    // todo: make the route secure for instructor..using verifyinstructctor middleware
+    app.post("/addclass", async (req, res) => {
+      const item = req.body;
+
+      const result = await classCollection.insertOne(item);
+      console.log(result);
       res.send(result);
     });
 
