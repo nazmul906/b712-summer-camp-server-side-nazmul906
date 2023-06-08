@@ -56,6 +56,7 @@ async function run() {
 
     const userCollection = client.db("SummerCamp").collection("users");
     const classCollection = client.db("SummerCamp").collection("allclass");
+
     // jwt
     app.post("/jwt", (req, res) => {
       const user = req.body;
@@ -72,8 +73,13 @@ async function run() {
     app.post("/users", async (req, res) => {
       const user = req.body;
       //   console.log(user);
-      const query = { email: user.email };
 
+      if (user.email !== req.decoded.email) {
+        return res
+          .status(401)
+          .send({ error: true, message: "unathorized token" });
+      }
+      const query = { email: user.email };
       const result = await userCollection.insertOne(query);
       //   console.log(result);
       res.send(result);
@@ -82,17 +88,11 @@ async function run() {
     // only admin can see all user
     //todo: secured this request for admin
     app.get("/users", verifyJwt, async (req, res) => {
-      const user = req.body;
-
-      if (user.email !== req.decoded.email) {
-        return res
-          .status(401)
-          .send({ error: true, message: "unathorized token" });
-      }
       const result = await userCollection.find().toArray();
       res.send(result);
     });
 
+    // make admin by manual admin
     app.patch("/users/admin/:id", async (req, res) => {
       const id = req.params.id;
 
@@ -112,7 +112,6 @@ async function run() {
     // now make moderator via admin
     //todo: secured this request for admin
 
-    //localhost:5000/users/instructor/6480dff281e4c2ff69c92651
     app.patch("/users/instructor/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
@@ -127,14 +126,36 @@ async function run() {
     });
 
     // check whether the user admin/not
-    // remember:cliet will recieve logged in user from authContext to perform transtack wury
+    // remember:client will recieve logged in user from authContext to perform transtack wury
 
-    app.get("/users/admin/:email", async (req, res) => {
+    app.get("/users/admin/:email", verifyJwt, async (req, res) => {
       const userEmail = req.params.email;
+
+      if (userEmail !== req.decoded.email) {
+        res.send({ admin: false });
+      }
+
       const query = { email: userEmail };
       const user = await userCollection.findOne(query);
-      console.log("user", user);
+      // console.log("user", user);
+      // if user exist then match his role
       const result = { admin: user?.role === "admin" };
+      res.send(result);
+    });
+
+    // check whether instructor or not
+
+    app.get("/users/instructor/:email", verifyJwt, async (req, res) => {
+      const userEmail = req.params.email;
+
+      if (userEmail !== req.decoded.email) {
+        res.send({ instructor: false });
+      }
+      const query = { email: userEmail };
+      const user = await userCollection.findOne(query);
+      console.log(user);
+      const result = { instructor: user?.role === "instructor" };
+      // response is {instructor:true}
       res.send(result);
     });
 
