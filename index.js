@@ -164,6 +164,31 @@ async function run() {
       res.send(result);
     });
 
+    // to show all class added by an instructor email
+    app.get("/myclass", async (req, res) => {
+      // const userEmail = req.params.email;
+      const { email } = req.query;
+      console.log("email", email);
+
+      let query = {};
+      if (req.query?.email) {
+        query = { instructorEmail: req.query.email };
+      }
+
+      // const query = { email: email };
+      const result = await classCollection.find(query).toArray();
+      console.log(result);
+      res.send(result);
+    });
+
+    // app.get("/myclass", async (req, res) => {
+    //   const { email } = req.query;
+    //   const query = { email: email };
+    //   const result = await classCollection.find(query).toArray();
+    //   console.log(result);
+    //   res.send(result);
+    // });
+
     // todo: this class should be the approved class by admin
     app.get("/allclass", async (req, res) => {
       const result = await classCollection.find().toArray();
