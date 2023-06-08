@@ -2,6 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const port = process.env.PORT || 5000;
 const app = express();
+
+const jwt = require("jsonwebtoken");
 // to get data from env file
 require("dotenv").config();
 // middleware
@@ -32,6 +34,15 @@ async function run() {
 
     const userCollection = client.db("SummerCamp").collection("users");
     const classCollection = client.db("SummerCamp").collection("allclass");
+    // jwt
+    app.post("/jwt", (req, res) => {
+      const user = req.body;
+
+      const jwtToken = jwt.sign(user, env.process.SecretAccessToken, {
+        expiresIn: "1hr",
+      });
+      res.send({ jwtToken });
+    });
 
     // for all user
     // this api hits from sign up and social login page
