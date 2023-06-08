@@ -8,6 +8,28 @@ const jwt = require("jsonwebtoken");
 require("dotenv").config();
 // middleware
 app.use(cors());
+
+// verify jwt middle ware
+
+const verifyJwt = (req, res, next) => {
+  const authorization = req.headers.authorization;
+  if (!authorization) {
+    return res.status(401).send({ error: true, message: "unathorized token" });
+  }
+
+  const token = authorization.split(" ")[1];
+  // now verify
+  jwt.verify(token, process.env.SecretAccessToken, (err, decoded) => {
+    if (err) {
+      return res
+        .status(401)
+        .send({ error: true, message: "unathorized token" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
+
 app.use(express.json());
 app.get("/", (req, res) => {
   res.send("Welcome to foreign laguage school");
@@ -38,7 +60,7 @@ async function run() {
     app.post("/jwt", (req, res) => {
       const user = req.body;
 
-      const jwtToken = jwt.sign(user, env.process.SecretAccessToken, {
+      const jwtToken = jwt.sign(user, process.env.SecretAccessToken, {
         expiresIn: "1hr",
       });
       res.send({ jwtToken });
@@ -59,7 +81,14 @@ async function run() {
 
     // only admin can see all user
     //todo: secured this request for admin
-    app.get("/users", async (req, res) => {
+    app.get("/users", verifyJwt, async (req, res) => {
+      const user = req.body;
+
+      if (user.email !== req.decoded.email) {
+        return res
+          .status(401)
+          .send({ error: true, message: "unathorized token" });
+      }
       const result = await userCollection.find().toArray();
       res.send(result);
     });
