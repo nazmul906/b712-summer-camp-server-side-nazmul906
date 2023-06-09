@@ -182,12 +182,92 @@ async function run() {
     });
 
     // it will be in admin dashboard to check allt he class in manage class
+    // const { email } = req.query;
+    // const query = { email: email };
     app.get("/myclass", async (req, res) => {
       // const { email } = req.query;
-      // const query = { email: email };
+
+      // let enrollment = {};
+      // if(req.query?.email){}
+      const query = { email: email };
+      const query2 = { _id: id };
+
       const result = await classCollection.find(query).toArray();
       // console.log(result);
       res.send(result);
+    });
+
+    // select
+    app.post("/myclass", async (req, res) => {
+      const { item } = req.body;
+      const filter = { _id: _id };
+      const result = classCollection.insertOne();
+      res.send(result);
+    });
+
+    // seleted class and update
+    app.put("/myclass1/:id", async (req, res) => {
+      const id = req.params.id;
+      const { enrollment } = req.body;
+      // now find if the item exist
+      const query = { _id: id };
+      const selectedItem = await classCollection.findOne(query);
+
+      if (selectedItem) {
+        let updateEnrollment = [];
+        if (!selectedItem.enrollment) {
+          updateEnrollment = [enrollment];
+        } else {
+          updateEnrollment = [...selectedItem.enrollment, enrollment];
+        }
+
+        const result = await classCollection.updateOne(updateEnrollment);
+        console.log(result);
+        res.send(result);
+      } else {
+        res.status(404).json({ error: "Class not found" });
+      }
+    });
+
+    //check select from allclass
+    app.put("/myclass/select/:id", async (req, res) => {
+      const id = req.params.id;
+      const { enrollment } = req.body;
+      // wrong way
+      // const query = { _id: id };
+
+      //right way
+      const query = { _id: new ObjectId(id) };
+      try {
+        // Find the class document based on the item ID
+        const classDocument = await classCollection.findOne(query);
+        // console.log("selected item", classDocument);
+        if (classDocument) {
+          const updatedEnrollment = classDocument.enrollment
+            ? [...classDocument.enrollment, enrollment]
+            : [enrollment];
+          // console.log("updatedEnrollment", updatedEnrollment);
+
+          const updateDoc = {
+            $set: { enrollment: updatedEnrollment },
+          };
+
+          const result = await classCollection.updateOne(query, updateDoc);
+          // console.log("res", result);
+          if (result.modifiedCount === 1) {
+            res.status(200).json({ message: "Class updated successfully" });
+          } else {
+            res.status(500).json({ error: "Failed to update class" });
+          }
+        } else {
+          // If the class document is not found, return an error response
+          res.status(404).json({ error: "Class not found" });
+        }
+      } catch (error) {
+        res
+          .status(500)
+          .json({ error: "An error occurred while updating the class" });
+      }
     });
 
     // approved /deny by admin
@@ -206,11 +286,14 @@ async function run() {
     });
 
     // todo: this class should be the approved class by admin before rendering to allclass navbar
-    app.get("/allclass", verifyJwt, async (req, res) => {
-      const result = await classCollection.find().toArray();
-      //   console.log(result);
-      res.send(result);
-    });
+    // app.get("/allclass", async (req, res) => {
+    //   const { id } = req.query;
+    //   const query = { _id: id };
+    //   const result = await classCollection.find(query).toArray();
+    //   console.log("allclass", result);
+
+    //   res.send(result);
+    // });
 
     app.get("/approveclass", async (req, res) => {
       const query = { status: "approved" };
