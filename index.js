@@ -148,7 +148,7 @@ async function run() {
       }
       const query = { email: userEmail };
       const user = await userCollection.findOne(query);
-      console.log(user);
+      // console.log(user);
       const result = { instructor: user?.role === "instructor" };
       // response is {instructor:true}
       res.send(result);
@@ -160,7 +160,7 @@ async function run() {
       const item = req.body;
 
       const result = await classCollection.insertOne(item);
-      console.log(result);
+      // console.log(result);
       res.send(result);
     });
 
@@ -168,7 +168,7 @@ async function run() {
     app.get("/myclass", async (req, res) => {
       // const userEmail = req.params.email;
       const { email } = req.query;
-      console.log("email", email);
+      // console.log("email", email);
 
       let query = {};
       if (req.query?.email) {
@@ -177,18 +177,33 @@ async function run() {
 
       // const query = { email: email };
       const result = await classCollection.find(query).toArray();
-      console.log(result);
+      // console.log(result);
       res.send(result);
     });
 
-    // app.get("/myclass", async (req, res) => {
-    //   const { email } = req.query;
-    //   const query = { email: email };
-    //   const result = await classCollection.find(query).toArray();
-    //   console.log(result);
-    //   res.send(result);
-    // });
+    // it will be in admin dashboard to check allt he class in manage class
+    app.get("/myclass", async (req, res) => {
+      // const { email } = req.query;
+      // const query = { email: email };
+      const result = await classCollection.find(query).toArray();
+      // console.log(result);
+      res.send(result);
+    });
+    // approved /deny by admin
 
+    app.patch("/myclass/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+
+      const updateDoc = {
+        $set: {
+          status: "approved",
+        },
+      };
+      const result = await classCollection.updateOne(filter, updateDoc);
+      console.log("update", result);
+      res.send(result);
+    });
     // todo: this class should be the approved class by admin
     app.get("/allclass", async (req, res) => {
       const result = await classCollection.find().toArray();
