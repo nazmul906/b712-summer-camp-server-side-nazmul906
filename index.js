@@ -189,8 +189,8 @@ async function run() {
       // console.log(result);
       res.send(result);
     });
-    // approved /deny by admin
 
+    // approved /deny by admin
     app.patch("/myclass/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
@@ -204,9 +204,17 @@ async function run() {
       console.log("update", result);
       res.send(result);
     });
-    // todo: this class should be the approved class by admin
-    app.get("/allclass", async (req, res) => {
+
+    // todo: this class should be the approved class by admin before rendering to allclass navbar
+    app.get("/allclass", verifyJwt, async (req, res) => {
       const result = await classCollection.find().toArray();
+      //   console.log(result);
+      res.send(result);
+    });
+
+    app.get("/approveclass", async (req, res) => {
+      const query = { status: "approved" };
+      const result = await classCollection.find(query).toArray();
       //   console.log(result);
       res.send(result);
     });
