@@ -1,11 +1,12 @@
 const express = require("express");
+require("dotenv").config();
 const cors = require("cors");
 const port = process.env.PORT || 5000;
 const app = express();
-
+const stripe = require("stripe")(process.env.stipeSecretKey);
 const jwt = require("jsonwebtoken");
 // to get data from env file
-require("dotenv").config();
+
 // middleware
 app.use(cors());
 
@@ -55,8 +56,9 @@ async function run() {
     // Send a ping to confirm a successful connection
 
     const userCollection = client.db("SummerCamp").collection("users");
-    const classCollection = client.db("SummerCamp").collection("allclass");
 
+    const classCollection = client.db("SummerCamp").collection("allclass");
+    const paymentCollection = client.db("SummerCamp").collection("payments");
     // jwt
     app.post("/jwt", (req, res) => {
       const user = req.body;
@@ -284,7 +286,12 @@ async function run() {
       console.log("update", result);
       res.send(result);
     });
-
+    app.get("/approveclass", async (req, res) => {
+      const query = { status: "approved" };
+      const result = await classCollection.find(query).toArray();
+      //   console.log(result);
+      res.send(result);
+    });
     // todo: this class should be the approved class by admin before rendering to allclass navbar
     // app.get("/allclass", async (req, res) => {
     //   const { id } = req.query;
@@ -295,11 +302,34 @@ async function run() {
     //   res.send(result);
     // });
 
-    app.get("/approveclass", async (req, res) => {
-      const query = { status: "approved" };
-      const result = await classCollection.find(query).toArray();
-      //   console.log(result);
-      res.send(result);
+    // payment intent
+    app.post("/create-payment-intent", verifyJwt, async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+
+      console.log(price, amount);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    // payment related api
+    app.post("/payments", verifyJwt, async (req, res) => {
+      const payment = req.body;
+      const insertResult = await paymentCollection.insertOne(payment);
+
+      // const query = {
+      //   _id: { $in: payment.cartItems.map((id) => new ObjectId(id)) },
+      // };
+      // const deleteResult = await cartCollection.deleteMany(query);
+
+      res.send({ insertResult });
     });
 
     await client.db("admin").command({ ping: 1 });
