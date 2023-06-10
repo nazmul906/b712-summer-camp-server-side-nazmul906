@@ -192,7 +192,7 @@ async function run() {
       // let enrollment = {};
       // if(req.query?.email){}
       const query = { email: email };
-      const query2 = { _id: id };
+      // const query2 = { _id: id };
 
       const result = await classCollection.find(query).toArray();
       // console.log(result);
@@ -332,6 +332,14 @@ async function run() {
       res.send({ insertResult });
     });
 
+    app.get("/payment", async (req, res) => {
+      const { email } = req.query;
+
+      const query = { email: email };
+      const payment = await paymentCollection.find(query).toArray();
+      console.log(payment);
+      res.send(payment);
+    });
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
