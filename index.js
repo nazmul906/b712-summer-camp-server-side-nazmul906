@@ -52,13 +52,51 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
     // Send a ping to confirm a successful connection
 
     const userCollection = client.db("SummerCamp").collection("users");
 
     const classCollection = client.db("SummerCamp").collection("allclass");
     const paymentCollection = client.db("SummerCamp").collection("payments");
+    // admin verification middlewaware
+    // this middleware is written here cuz we need db connvtn to check it
+
+    // const verifyAdmin = async (req, res, next) => {
+    //   email = req.decoded.email;
+    //   const query = { email: email };
+
+    //   const user = await userCollection.findOne(query).toArray();
+    //   if (user?.role !== "admin") {
+    //     return res
+    //       .status(403)
+    //       .send({ error: true, message: "forbidden message" });
+    //   }
+    //   next();
+    // };
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      if (user?.role !== "admin") {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden message" });
+      }
+      next();
+    };
+    // const verifyInstructor = async (req, res, next) => {
+    //   email = req.decoded.email;
+    //   const query = { email: email };
+
+    //   const user = await userCollection.findOne(query).toArray();
+    //   if (user?.role !== "instructor") {
+    //     return res
+    //       .status(403)
+    //       .send({ error: true, message: "forbidden message" });
+    //   }
+    //   next();
+    // };
     // jwt
     app.post("/jwt", (req, res) => {
       const user = req.body;
@@ -71,7 +109,7 @@ async function run() {
 
     // for all user
     // this api hits from sign up and social login page
-    // todo:Socail login check
+    // todo:Social login check
     app.post("/users", async (req, res) => {
       const user = req.body;
       //   console.log(user);
@@ -84,7 +122,7 @@ async function run() {
 
     // only admin can see all user
     //todo: secured this request for admin
-    app.get("/users", verifyJwt, async (req, res) => {
+    app.get("/users", verifyJwt, verifyAdmin, async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
@@ -109,20 +147,25 @@ async function run() {
     // now make moderator via admin
     //todo: secured this request for admin
 
-    app.patch("/users/instructor/:id", async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
+    app.patch(
+      "/users/instructor/:id",
+      verifyJwt,
 
-      const updateDoc = {
-        $set: {
-          role: "instructor",
-        },
-      };
-      const result = await userCollection.updateOne(filter, updateDoc);
-      res.send(result);
-    });
+      async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
 
-    // check whether the user admin/not
+        const updateDoc = {
+          $set: {
+            role: "instructor",
+          },
+        };
+        const result = await userCollection.updateOne(filter, updateDoc);
+        res.send(result);
+      }
+    );
+
+    // check whether the user admin/not//for useAdmin hook
     // remember:client will recieve logged in user from authContext to perform transtack wury
 
     app.get("/users/admin/:email", verifyJwt, async (req, res) => {
@@ -140,7 +183,7 @@ async function run() {
       res.send(result);
     });
 
-    // check whether instructor or not
+    // check whether instructor or not for useInstructor hooks
 
     app.get("/users/instructor/:email", verifyJwt, async (req, res) => {
       const userEmail = req.params.email;
@@ -183,7 +226,7 @@ async function run() {
       res.send(result);
     });
 
-    // it will be in admin dashboard to check allt he class in manage class
+    // it will be in admin dashboard to check all the class in manage class
     // const { email } = req.query;
     // const query = { email: email };
     app.get("/myclass", async (req, res) => {
@@ -200,36 +243,12 @@ async function run() {
     });
 
     // select
-    app.post("/myclass", async (req, res) => {
-      const { item } = req.body;
-      const filter = { _id: _id };
-      const result = classCollection.insertOne();
-      res.send(result);
-    });
-
-    // seleted class and update
-    app.put("/myclass1/:id", async (req, res) => {
-      const id = req.params.id;
-      const { enrollment } = req.body;
-      // now find if the item exist
-      const query = { _id: id };
-      const selectedItem = await classCollection.findOne(query);
-
-      if (selectedItem) {
-        let updateEnrollment = [];
-        if (!selectedItem.enrollment) {
-          updateEnrollment = [enrollment];
-        } else {
-          updateEnrollment = [...selectedItem.enrollment, enrollment];
-        }
-
-        const result = await classCollection.updateOne(updateEnrollment);
-        console.log(result);
-        res.send(result);
-      } else {
-        res.status(404).json({ error: "Class not found" });
-      }
-    });
+    // app.post("/myclass", async (req, res) => {
+    //   const { item } = req.body;
+    //   const filter = { _id: _id };
+    //   const result = classCollection.insertOne();
+    //   res.send(result);
+    // });
 
     //check select from allclass
     app.put("/myclass/select/:id", async (req, res) => {
@@ -272,26 +291,102 @@ async function run() {
       }
     });
 
-    // approved /deny by admin
-    app.patch("/myclass/:id", async (req, res) => {
+    // delete my selected class
+
+    app.patch("/myclass/delete/:id", async (req, res) => {
       const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
+      const query = { _id: new ObjectId(id) };
+
+      const classDocument = await classCollection.findOne(query);
+      if (!classDocument) {
+        return res.status(404).json({ error: "Class not found" });
+      }
+
+      const { emailToDelete } = req.body;
+
+      const updatedEnrollment = classDocument.enrollment.filter(
+        (email) => email !== emailToDelete
+      );
 
       const updateDoc = {
         $set: {
-          status: "approved",
+          enrollment: updatedEnrollment,
+        },
+      };
+
+      const result = await classCollection.updateOne(query, updateDoc);
+
+      res.json(result);
+    });
+
+    // approved by admin
+    app.patch(
+      "/myclass/approve/:id",
+      verifyJwt,
+
+      async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+
+        const updateDoc = {
+          $set: {
+            status: "approved",
+          },
+        };
+        const result = await classCollection.updateOne(filter, updateDoc);
+        // console.log("update", result);
+        res.send(result);
+      }
+    );
+
+    // deny by admin
+
+    app.patch("/myclass/deny/:id", verifyJwt, async (req, res) => {
+      const id = req.params.id;
+      // find the item
+      const filter = { _id: new ObjectId(id) };
+      // update it
+      const updateDoc = {
+        $set: {
+          status: "denied by admin",
         },
       };
       const result = await classCollection.updateOne(filter, updateDoc);
-      console.log("update", result);
+      console.log("denied", result);
       res.send(result);
     });
+
+    // send feedback by admin
+    app.put("/myclass/feedback/:id", verifyJwt, async (req, res) => {
+      const id = req.params.id;
+      const { feedback } = req.body;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          feedback: feedback,
+        },
+      };
+      const result = await classCollection.updateOne(filter, updateDoc);
+      console.log("updated", result);
+      res.send(result);
+    });
+
+    // show allclass approved by admin in nav allclass
     app.get("/approveclass", async (req, res) => {
       const query = { status: "approved" };
       const result = await classCollection.find(query).toArray();
       //   console.log(result);
       res.send(result);
     });
+    // instructor info in nav
+    // take those from user whose role are instructor
+    app.get("/instructors", verifyJwt, async (req, res) => {
+      const query = { role: "instructor" };
+      const result = await userCollection.find(query).toArray();
+      console.log(result);
+      res.send(result);
+    });
+
     // todo: this class should be the approved class by admin before rendering to allclass navbar
     // app.get("/allclass", async (req, res) => {
     //   const { id } = req.query;
