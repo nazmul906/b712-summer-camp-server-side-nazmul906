@@ -248,35 +248,36 @@ async function run() {
 
       //right way
       const query = { _id: new ObjectId(id) };
-      try {
-        // Find the class document based on the item ID
-        const classDocument = await classCollection.findOne(query);
-        // console.log("selected item", classDocument);
-        if (classDocument) {
-          const updatedEnrollment = classDocument.enrollment
-            ? [...classDocument.enrollment, enrollment]
-            : [enrollment];
-          // console.log("updatedEnrollment", updatedEnrollment);
+      // try {
+      // Find the class document based on the item ID
+      const classDocument = await classCollection.findOne(query);
+      // console.log("selected item", classDocument);
+      if (classDocument) {
+        const updatedEnrollment = classDocument.enrollment
+          ? [...classDocument.enrollment, enrollment]
+          : [enrollment];
+        // console.log("updatedEnrollment", updatedEnrollment);
 
-          const updateDoc = {
-            $set: { enrollment: updatedEnrollment },
-          };
+        const updateDoc = {
+          $set: { enrollment: updatedEnrollment },
+        };
 
-          const result = await classCollection.updateOne(query, updateDoc);
-          // console.log("res", result);
-          if (result.modifiedCount === 1) {
-            res.status(200).json({ message: "Class updated successfully" });
-          } else {
-            res.status(500).json({ error: "Failed to update class" });
-          }
-        } else {
-          // If the class document is not found, return an error response
-          res.status(404).json({ error: "Class not found" });
-        }
-      } catch (error) {
-        res
-          .status(500)
-          .json({ error: "An error occurred while updating the class" });
+        const result = await classCollection.updateOne(query, updateDoc);
+        res.send(result);
+        // console.log("res", result);
+        //   if (result.modifiedCount === 1) {
+        //     res.status(200).json({ message: "Class updated successfully" });
+        //   } else {
+        //     res.status(500).json({ error: "Failed to update class" });
+        //   }
+        // } else {
+        //   // If the class document is not found, return an error response
+        //   res.status(404).json({ error: "Class not found" });
+        // }
+        // } catch (error) {
+        //   res
+        //     .status(500)
+        //     .json({ error: "An error occurred while updating the class" });
       }
     });
 
